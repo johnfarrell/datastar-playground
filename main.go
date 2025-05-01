@@ -1,7 +1,12 @@
 package main
 
-import "fmt"
+import (
+	"github.com/johnfarrell/datastar-playground/internal/cmd"
+	"os"
+)
 
 func main() {
-	fmt.Println("Hello World")
+	if err := cmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }
