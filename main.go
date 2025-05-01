@@ -1,12 +1,18 @@
 package main
 
 import (
-	"github.com/johnfarrell/datastar-playground/internal/cmd"
+	"context"
+	"github.com/johnfarrell/datastar-playground/cmd"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	if err := cmd.Execute(ctx); err != nil {
 		os.Exit(1)
 	}
 }

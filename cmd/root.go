@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"net/http"
+
+	_ "net/http/pprof"
 )
 
 // Create a package-level logger here so we can initialize it all in one place
@@ -17,6 +21,11 @@ var rootCmd = &cobra.Command{
 	Short: "Datastar playground application",
 	Long:  "Playground application for learning the Datastar framework.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if viper.GetBool("profile") {
+			go func() {
+				_ = http.ListenAndServe("localhost:6060", nil)
+			}()
+		}
 		if err := validateConfig(); err != nil {
 			return err
 		}
@@ -27,7 +36,8 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func Execute() error {
+func Execute(ctx context.Context) error {
+	rootCmd.SetContext(ctx)
 	return rootCmd.Execute()
 }
 
@@ -37,10 +47,14 @@ func init() {
 
 	rootCmd.PersistentFlags().IntP("loglevel", "l", 1, "Log level (0 - Debug, 1 - Info, 2 - Warn, 3 - Error")
 	_ = viper.BindPFlag("loglevel", rootCmd.PersistentFlags().Lookup("loglevel"))
+
+	rootCmd.PersistentFlags().Bool("profile", false, "Enable profiling via pprof endpoint")
+	_ = viper.BindPFlag("profile", rootCmd.PersistentFlags().Lookup("profile"))
 }
 
 // initConfig sets up the Viper configuration.
 func initConfig() {
+	viper.SetEnvPrefix("dsp")
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
