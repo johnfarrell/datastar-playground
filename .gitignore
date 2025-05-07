@@ -26,3 +26,9 @@ go.work.sum
 
 # GoLand
 .idea
+
+# Taskfile
+.task
+
+# Build output
+build/*
