@@ -1,0 +1,86 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  BUILD_DIR: build
+  EXE: dsp
+  BINARY: "{{.BUILD_DIR}}/{{.EXE}}"
+
+
+  GIT_URL: "github.com/johnfarrell/datastar-playground"
+  GIT_COMMIT:
+    sh: git log -n 1 --format=%h
+  GIT_BRANCH:
+    sh: git rev-parse --abbrev-ref HEAD
+  DATETIME:
+    sh: date -u +'%Y-%m-%dT%H:%M:%SZ'
+
+tasks:
+  default:
+    desc: |
+      Build and runs the datastar-playground application. Use `--` to pass CLI arguments.
+    aliases: [run]
+    cmds:
+      - ./{{.BINARY}} {{.CLI_ARGS}}
+    deps:
+      - task: build
+  help:
+    desc: Lists all available tasks.
+    cmds:
+      - task --list-all
+  deps:
+    desc: Downloads and verifies dependencies.
+    cmds:
+      - go mod download
+      - go mod tidy
+      - go mod verify
+    sources:
+      - go.mod
+      - go.tidy
+  build:
+    desc: Builds the DSP binary with included Git metadata.
+    cmds:
+      - >-
+        go build \
+          --ldflags=" \
+            -X '{{.GIT_URL}}/internal/version.buildDate={{.DATETIME}}' \
+            -X '{{.GIT_URL}}/internal/version.gitVersion={{.GIT_BRANCH}}' \
+            -X '{{.GIT_URL}}/internal/version.gitCommit={{.GIT_COMMIT}}'" \
+          -o {{.BINARY}} .
+    requires:
+      vars: [DATETIME, GIT_BRANCH, GIT_COMMIT, BINARY]
+    deps:
+      - task: deps
+    sources:
+      - main.go
+      - cmd/**/*.go
+      - internal/**/*.go
+      - pkg/**/*.go
+    generates:
+      - ./{{.BINARY}}
+  test:
+    cmds:
+      - go test ./...
+  vet:
+    cmds:
+      - go vet ./...
+  docker-build:
+    cmds:
+      - >- 
+        docker build --tag dsp \
+          --tag "{{.BINARY}}:{{.GIT_BRANCH}}-{{.GIT_COMMIT}}" \
+          --build-arg VERSION="{{.GIT_BRANCH}}-{{.GIT_COMMIT}}" \
+          --build-arg BUILD_DATE="{{.DATETIME}}" \
+          --build-arg VCS_REF="{{.GIT_COMMIT}}" \
+          .
+    requires:
+      vars: [GIT_BRANCH, GIT_COMMIT, DATETIME]
+    sources:
+      - Dockerfile
+      - .dockerignore
+  docker-run:
+    cmds:
+      - docker run dsp
+    deps:
+      - task: docker-build

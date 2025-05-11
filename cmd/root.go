@@ -3,11 +3,11 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/johnfarrell/datastar-playground/internal/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"net/http"
-
 	_ "net/http/pprof"
 )
 
@@ -91,5 +91,11 @@ func initLogger() error {
 		return fmt.Errorf("failed to build logger config: %w", err)
 	}
 
+	logger = configureLoggerValues(logger)
+
 	return nil
+}
+
+func configureLoggerValues(l *zap.Logger) *zap.Logger {
+	return l.With(zap.Any("versionInfo", version.Get()))
 }
